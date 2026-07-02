@@ -1,45 +1,15 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ki_rag_ollama
-    entrypoint:
-      - /bin/sh
-      - -lc
-      - |
-          ollama serve &
-          pid=$$!
-          until ollama list >/dev/null 2>&1; do
-            sleep 1
-          done
-          ollama pull llama3.2
-          wait "$$pid"
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=0.0.0.0:11434
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   frontend:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
       args:
-        OLLAMA_BASE_URL: http://ollama:11434/api
+        # host.docker.internal ist der magische Befehl, damit Docker auf deinen Mac zugreift
+        OLLAMA_BASE_URL: http://host.docker.internal:11434/api
     container_name: ki_rag_frontend
     ports:
       - "3000:3000"
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434/api
-    depends_on:
-      ollama:
-        condition: service_healthy
+      # Auch zur Laufzeit muss die URL auf deinen Mac zeigen
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/api
     restart: unless-stopped
-
-volumes:
-  ollama-data:
