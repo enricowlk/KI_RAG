@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 
 type UploadedDocument = {
   id: string;
@@ -44,6 +45,7 @@ export default function Home() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [input, setInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -58,11 +60,19 @@ export default function Home() {
     }, 4000);
   }, []);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
-    api: "/api/chat",
-    body: {
-      documentIds,
-    },
+  // Transport wird neu erzeugt, sobald sich die Liste der hochgeladenen
+  // Dokument-IDs ändert -> kein Ref-Zugriff während des Renderns nötig.
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        body: { documentIds },
+      }),
+    [documentIds],
+  );
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport,
     onError(requestError) {
       const message = requestError.message || "Fehler: Verbindung zur lokalen KI fehlgeschlagen. Bitte prüfe, ob Ollama läuft.";
       setChatError(message);
@@ -70,17 +80,12 @@ export default function Home() {
     },
   });
 
+  const isLoading = status === "submitted" || status === "streaming";
   const canChat = documents.length > 0 && !isUploading;
 
-  useEffect(() => {
-    if (!error) {
-      return;
-    }
-
-    const message = error.message || "Fehler: Verbindung zur lokalen KI fehlgeschlagen. Bitte prüfe, ob Ollama läuft.";
-    setChatError(message);
-    addToast("Lokale KI nicht erreichbar", message);
-  }, [addToast, error]);
+  // Hinweis: Der frühere separate useEffect, der `error` nach chatError
+  // synchronisiert hat, wurde entfernt - onError oben deckt denselben Fall
+  // bereits ab und vermeidet damit unnötiges setState im Effect.
 
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -172,15 +177,23 @@ export default function Home() {
 
   const submitMessage = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      const trimmed = input.trim();
+      if (!trimmed || !canChat || isLoading) {
+        return;
+      }
+
       setChatError(null);
-      handleSubmit(event);
+      sendMessage({ text: trimmed });
+      setInput("");
     },
-    [handleSubmit],
+    [canChat, input, isLoading, sendMessage],
   );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_30%),linear-gradient(135deg,_#07111f_0%,_#091927_45%,_#050b13_100%)] text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:72px_72px] opacity-15" />
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_30%),linear-gradient(135deg,#07111f_0%,#091927_45%,#050b13_100%)] text-slate-100">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[72px_72px] opacity-15" />
       <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         <header className="mb-4 flex flex-col gap-3 rounded-[28px] border border-white/10 bg-white/5 px-5 py-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -198,8 +211,8 @@ export default function Home() {
         </header>
 
         <div className="grid flex-1 gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
-          <section className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-slate-950/70 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-            <div className="rounded-[24px] border border-dashed border-cyan-400/35 bg-cyan-400/5 p-5">
+          <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <div className="rounded-3xl border border-dashed border-cyan-400/35 bg-cyan-400/5 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-cyan-100">PDF Upload</p>
@@ -257,7 +270,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white">Hochgeladene Dokumente</h3>
@@ -289,7 +302,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="flex min-h-[70vh] flex-col rounded-[28px] border border-white/10 bg-slate-950/70 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <section className="flex min-h-[70vh] flex-col rounded-3xl border border-white/10 bg-slate-950/70 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-white">Chat Interface</h2>
@@ -312,7 +325,7 @@ export default function Home() {
               ) : null}
 
               {messages.length === 0 ? (
-                <div className="flex h-full min-h-[320px] flex-col items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-slate-950/50 px-6 text-center">
+                <div className="flex h-full min-h-80 flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-slate-950/50 px-6 text-center">
                   <div className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.28em] text-cyan-100">
                     ChatGPT-Stil · lokal
                   </div>
@@ -329,7 +342,7 @@ export default function Home() {
                     return (
                       <div key={message.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                         <div
-                          className={`max-w-[85%] rounded-[24px] px-4 py-3 text-sm leading-6 shadow-lg ${
+                          className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 shadow-lg ${
                             isUser
                               ? "bg-cyan-400 text-slate-950"
                               : "border border-white/10 bg-slate-900/90 text-slate-100"
@@ -350,7 +363,7 @@ export default function Home() {
             </div>
 
             <form onSubmit={submitMessage} className="border-t border-white/10 px-5 py-4">
-              <div className="rounded-[24px] border border-white/10 bg-slate-900/90 p-3">
+              <div className="rounded-3xl border border-white/10 bg-slate-900/90 p-3">
                 <label className="sr-only" htmlFor="chat-input">
                   Frage an die PDFs
                 </label>
@@ -359,8 +372,14 @@ export default function Home() {
                   value={input}
                   disabled={!canChat}
                   onChange={(event) => {
-                    handleInputChange(event);
+                    setInput(event.target.value);
                     setChatError(null);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      event.currentTarget.form?.requestSubmit();
+                    }
                   }}
                   placeholder={canChat ? "Frage zu deinem PDF stellen …" : "Lade zuerst ein PDF hoch …"}
                   rows={3}

@@ -21,7 +21,9 @@ export function storePdfDocument(document: Omit<StoredPdfDocument, "id" | "uploa
 }
 
 export function getPdfDocuments(documentIds: string[]) {
-  return documentIds.map((documentId) => pdfDocuments.get(documentId)).filter((document): document is StoredPdfDocument => Boolean(document));
+  return documentIds
+    .map((documentId) => pdfDocuments.get(documentId))
+    .filter((document): document is StoredPdfDocument => Boolean(document));
 }
 
 export function buildPdfContext(documentIds?: string[], fallbackContext?: string) {

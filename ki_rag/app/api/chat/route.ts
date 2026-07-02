@@ -1,18 +1,17 @@
-import { streamText } from "ai";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
 import { buildPdfContext } from "@/app/lib/pdf-store";
 
 export const runtime = "nodejs";
 
-// Wir nutzen den offiziellen OpenAI Provider, leiten ihn aber auf deinen lokalen Mac um!
-const ollamaBaseUrl = process.env.OLLAMA_BASE_URL 
-  ? process.env.OLLAMA_BASE_URL.replace('/api', '/v1') // Wandelt /api in /v1 um
+const ollamaBaseUrl = process.env.OLLAMA_BASE_URL
+  ? process.env.OLLAMA_BASE_URL.replace("/api", "/v1")
   : "http://127.0.0.1:11434/v1";
 
 const ollama = createOpenAI({
   baseURL: ollamaBaseUrl,
-  apiKey: "ollama", // Ollama braucht eigentlich keinen API-Key, aber das Paket erwartet einen Platzhalter
+  apiKey: "ollama",
 });
 
 const ollamaModel = process.env.OLLAMA_MODEL ?? "llama3.2";
@@ -20,10 +19,16 @@ const ollamaModel = process.env.OLLAMA_MODEL ?? "llama3.2";
 const systemPrompt =
   "Du bist ein präziser Assistenz-Bot. Beantworte die Frage des Nutzers AUSSCHLIESSLICH auf Basis des folgenden bereitgestellten PDF-Kontexts. Wenn die Antwort im Text nicht zu finden ist, sage höflich, dass du es nicht weißt.";
 
+type ChatRequestBody = {
+  messages: UIMessage[];
+  documentIds?: string[];
+  pdfContext?: string;
+};
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    
+    const body: ChatRequestBody = await request.json();
+
     const pdfContext = buildPdfContext(body.documentIds, body.pdfContext);
 
     if (!pdfContext) {
@@ -33,16 +38,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await streamText({
-      // Da wir jetzt den offiziellen Provider nutzen, gibt es keine Typ-Fehler mehr!
+    // WICHTIG: in dieser SDK-Version ist convertToModelMessages async -> await nicht vergessen
+    const modelMessages = await convertToModelMessages(body.messages);
+
+    const result = streamText({
       model: ollama(ollamaModel),
-      
       system: `${systemPrompt}\n\nKontext:\n${pdfContext}`,
-      messages: body.messages, 
+      messages: modelMessages,
     });
 
-    return result.toTextStreamResponse();
-
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error("Chat route failed:", error);
     return NextResponse.json(

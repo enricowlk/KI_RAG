@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.5",
-    "@ai-sdk/react": "^1.2.12",
+    "@ai-sdk/react": "^4.0.12",
     "ai": "^7.0.11",
     "next": "16.2.10",
     "pdf-parse": "^2.4.5",

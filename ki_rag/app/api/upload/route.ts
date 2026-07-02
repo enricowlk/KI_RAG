@@ -69,9 +69,6 @@ export async function POST(request: Request) {
 
     const message = error instanceof Error ? error.message : "Die PDF-Verarbeitung ist fehlgeschlagen.";
 
-    return NextResponse.json(
-      { error: message },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
