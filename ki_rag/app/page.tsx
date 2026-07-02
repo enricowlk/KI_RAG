@@ -71,7 +71,7 @@ export default function Home() {
     [documentIds],
   );
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status } = useChat({
     transport,
     onError(requestError) {
       const message = requestError.message || "Fehler: Verbindung zur lokalen KI fehlgeschlagen. Bitte prüfe, ob Ollama läuft.";
@@ -194,22 +194,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_30%),linear-gradient(135deg,#07111f_0%,#091927_45%,#050b13_100%)] text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-size-[72px_72px] opacity-15" />
-      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <header className="mb-4 flex flex-col gap-3 rounded-[28px] border border-white/10 bg-white/5 px-5 py-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-200/80">Local PDF Knowledge Base</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">PDF Upload, Text Extraction und Ollama-Chat</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-              Lade PDFs hoch, extrahiere den Inhalt serverseitig und frage anschließend im Chat nur den hochgeladenen Kontext ab.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-200">
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">App Router</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Tailwind CSS</span>
-            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Ollama</span>
-          </div>
-        </header>
-
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8 lg:py-6">         
         <div className="grid flex-1 gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
           <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
             <div className="rounded-3xl border border-dashed border-cyan-400/35 bg-cyan-400/5 p-5">

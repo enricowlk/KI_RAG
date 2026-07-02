@@ -25,6 +25,12 @@ type ChatRequestBody = {
   pdfContext?: string;
 };
 
+// Unser eigener, kugelsicherer Typ für Ollama
+type CleanMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
 export async function POST(request: Request) {
   try {
     const body: ChatRequestBody = await request.json();
@@ -38,13 +44,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // WICHTIG: in dieser SDK-Version ist convertToModelMessages async -> await nicht vergessen
+    // 1. Offizielle Vercel-Umwandlung
     const modelMessages = await convertToModelMessages(body.messages);
 
-    const result = streamText({
+    // 2. Der "Ollama-Filter" baut strikt unser CleanMessage-Format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cleanMessages: CleanMessage[] = modelMessages.map((msg: any) => {
+      let textContent = "";
+      
+      // Wenn es schon ein String ist, super
+      if (typeof msg.content === "string") {
+        textContent = msg.content;
+      } 
+      // Wenn es ein Array mit nervigen Vercel-Metadaten ist, extrahieren wir nur den Text
+      else if (Array.isArray(msg.content)) {
+        textContent = msg.content
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter((part: any) => part.type === "text")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((part: any) => part.text)
+          .join("\n");
+      }
+      
+      return {
+        role: msg.role as "system" | "user" | "assistant",
+        content: textContent,
+      };
+    });
+
+    const result = await streamText({
       model: ollama(ollamaModel),
       system: `${systemPrompt}\n\nKontext:\n${pdfContext}`,
-      messages: modelMessages,
+      messages: cleanMessages,
     });
 
     return result.toUIMessageStreamResponse();
