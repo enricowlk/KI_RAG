@@ -17,7 +17,7 @@ const ollama = createOpenAI({
 const ollamaModel = process.env.OLLAMA_MODEL ?? "llama3.2";
 
 const systemPrompt =
-  "Du bist ein präziser Assistenz-Bot. Beantworte die Frage des Nutzers AUSSCHLIESSLICH auf Basis des folgenden bereitgestellten PDF-Kontexts. Wenn die Antwort im Text nicht zu finden ist, sage höflich, dass du es nicht weißt.";
+  "Du bist ein präziser deutscher Assistenz-Bot. Beantworte die Frage des Nutzers AUSSCHLIESSLICH auf Basis des folgenden bereitgestellten PDF-Kontexts. Wenn die Antwort im Text nicht zu finden ist, sage höflich, dass du es nicht weißt.";
 
 type ChatRequestBody = {
   messages: UIMessage[];
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       if (typeof msg.content === "string") {
         textContent = msg.content;
       } 
-      // Wenn es ein Array mit nervigen Vercel-Metadaten ist, extrahieren wir nur den Text
+      // Wenn es ein Array mit Vercel-Metadaten ist, extrahieren wir nur den Text
       else if (Array.isArray(msg.content)) {
         textContent = msg.content
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
